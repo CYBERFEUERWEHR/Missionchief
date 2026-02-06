@@ -1,0 +1,16 @@
+        Get the current ID's via: https://api.lss-manager.de/en_US/buildings
+
+        0	"Fire station"
+        3	"Ambulance station"
+        5	"Police station"
+        6	"Medical helicopter station"
+        8	"Police Aviation"
+        11	"Fire Boat Dock"
+        12	"Rescue Boat Dock"
+        14	"Clinic"
+        17	"Firefighting plane station"
+        18	"Federal Police Station"
+        22	"Fire Marshal's Office"
+        25	"Coastal Air Station"
+        26	"Lifeguard Post"
+        27	"Tow Truck Station"

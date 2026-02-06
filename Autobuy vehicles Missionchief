@@ -1,0 +1,223 @@
+// ==UserScript==
+// @name         [MC] Autobuy vehicles Missionchief
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Create different settings for vehicle purchases
+// @author       Silberfighter https://github.com/floflo3299 - Modified by CYBERWEHR for Missionchief.com
+// @include      https://www.missionchief.com/buildings/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=leitstellenspiel.de
+// @grant        none
+// ==/UserScript==
+
+(async function() {
+
+    const placeButtonOnTop =
+          1
+    ;
+
+
+    const vehicleConfigurations = [
+
+        /*
+
+        HOW IT WORKS:
+
+
+
+        {
+            buildingID: 11,           //This is the ID from Missionchief-API.
+            displayName: "Buy me!",   //The Name fot the Button in your Buildings
+            vehicles:[
+                [0,9],                //First Number: Vehicle-API, second number: Number of vehicles required
+                [35,3],               //New Row for another Vehicle-type
+            ]
+        },
+
+
+
+        The first number is the vehicle ID. The second number indicates how many vehicles should be available at the station.
+        The entry [0,9] means that the vehicle with ID 0 (Type 1 Fire Engine) will be present in the station 9 times at the end, NOT that 9 will be purchased.
+        This is relevant if Type 1 Fire Engines are already present in the station.
+
+        The script purchases vehicles in the order in which they are stored in the list.
+        The last place in the list is therefore purchased last. It therefore makes sense to put fire trucks at the back of the list so that no special vehicles are omitted in the event of insufficient parking spaces.
+
+
+
+        Get the current API-ID's from:
+
+        https://api.lss-manager.de/en_US/buildings
+        https://github.com/CYBERFEUERWEHR/Missionchief/blob/main/buildung_ids (Clean!)
+
+        https://api.lss-manager.de/en_US/vehicles
+        https://github.com/CYBERFEUERWEHR/Missionchief/blob/main/vehicle_ids (Clean!)
+
+
+
+        */
+
+        //------- THIS IS WHERE THE MAGIC HAPPENS -------
+
+        // FIRE DEPARTMENT EXAMPLE
+        {
+            buildingID: 0,
+            displayName: "3 Engines",
+            vehicles:[
+                [0,3],    //Type 1 Engine
+            ]
+        },
+
+        // EMERGENCIE MEDICALS SERVICE EXAMPLE
+        {
+            buildingID: 3,
+            displayName: "5 ALS & 1 Chief",
+            vehicles:[
+                [5,5],    //ALS
+                [29,1],   //EMS Chief
+            ]
+        },
+
+        //POLICE DEPARTMENT EXAMPLE
+        {
+            buildingID: 5,
+            displayName: "4 Patrol, 1 K-9 & 1 Supervisor",
+            vehicles:[
+                [10,3],   //Patrol
+                [19,1],   //K-9
+                [47,1],   //Supervisor
+            ]
+        },
+
+        //------- END OF MAGIC -------
+    ];
+
+
+    const buildingsIDToIgnore = [1,2,4,7,9,10,19,20,21,23,24];
+
+
+    let buildingId = window.location.href;
+    buildingId = buildingId.replace("https://www.missionchief.com/buildings/","");
+
+
+    let titleDiv = Array.from(document.getElementsByTagName("h1"));
+    titleDiv = titleDiv.filter(e => e.getAttribute("building_type") != undefined);
+
+
+    if(titleDiv.length == 0){
+        return;
+    }
+
+    titleDiv = titleDiv[0];
+
+    let buildingTypeID = Number(titleDiv.getAttribute("building_type"));
+
+    if(buildingsIDToIgnore.indexOf(buildingTypeID) >= 0){
+        return;
+    }
+
+    let allVehicles;
+    updateAllVehicles();
+
+
+    let wrapperDIV = document.createElement("div");
+    wrapperDIV.innerText = "Vehicle-Configs:";
+    wrapperDIV.style.padding = "15px 5px 15px 5px";
+
+    if(placeButtonOnTop){
+        titleDiv.parentNode.parentNode.insertBefore(wrapperDIV, titleDiv.parentNode.nextSibling);
+    }
+    else
+    {
+        $("#vehicle_table")[0].before(wrapperDIV);
+    }
+
+
+    for(let i = 0; i < vehicleConfigurations.length; i++){
+        if(vehicleConfigurations[i].buildingID == buildingTypeID){
+            let btn = document.createElement("a");
+            btn.className = "btn btn-success btn-xs autoVehicleBuy";
+            btn.setAttribute("config_id", i);
+            btn.innerText = vehicleConfigurations[i].displayName;
+            btn.style.margin = "5px 5px 5px 5px";
+            wrapperDIV.appendChild(btn);
+        }
+    }
+
+    let hintText = document.createElement("div");
+    hintText.innerText = "Press a button to purchase the vehicles. If no vehicles could be purchased, a message will appear stating whether all vehicles are available or not.";
+    wrapperDIV.appendChild(hintText);
+
+
+    // Add event listener to each element
+    document.querySelectorAll('.autoVehicleBuy').forEach(function(element) {
+        element.addEventListener('click', function() {
+            buyVehicles(element);
+        });
+    });
+
+
+    async function buyVehicles(btnPressed){
+
+        let messageText;
+
+        if(document.getElementById("autoBuyVehiclesMessagetTxt")){
+            messageText = document.getElementById("autoBuyVehiclesMessagetTxt");
+        }else{
+            messageText = document.createElement("div");
+            messageText.id = "autoBuyVehiclesMessagetTxt";
+            messageText.style.fontSize = "x-large";
+            messageText.style.fontWeight = "900";
+            wrapperDIV.appendChild(messageText);
+        }
+
+        messageText.innerText = "Please wait. Vehicles are being purchased.";
+
+
+        let vehicleBought = false;
+        let vehicleConfig = vehicleConfigurations[btnPressed.getAttribute("config_id")];
+        //console.log(vehicleConfig);
+
+        for(let i = 0; i < vehicleConfig.vehicles.length; i++){
+            let numberCurrentVehicles = allVehicles.filter(e => e.getAttribute("vehicle_type_id") == vehicleConfig.vehicles[i][0]).length;
+            //console.log(numberCurrentVehicles);
+
+            for(let n = numberCurrentVehicles; n < parseInt(vehicleConfig.vehicles[i][1]); n++){
+                await $.post("https://www.missionchief.com/buildings/" + buildingId + "/vehicle/" + buildingId + "/" + vehicleConfig.vehicles[i][0] + "/credits?building=" + buildingId, {"_method": "get", "authenticity_token": $("meta[name=csrf-token]").attr("content") });
+                await delay(100);
+                vehicleBought = true;
+            }
+        }
+
+        updateAllVehicles();
+        let allVehiclesBought = true;
+
+        for(let i = 0; i < vehicleConfig.vehicles.length; i++){
+            let numberCurrentVehicles = allVehicles.filter(e => e.getAttribute("vehicle_type_id") == vehicleConfig.vehicles[i][0]).length;
+
+            if(numberCurrentVehicles < parseInt(vehicleConfig.vehicles[i][1])){
+                allVehiclesBought = false;
+                break;
+            }
+        }
+
+
+        if(vehicleBought){
+            location.reload();
+        }else{
+            if(allVehiclesBought){
+                messageText.innerText = "All vehicles available";
+            }else{
+                messageText.innerText = "Fahrzeuge fehlen";
+            }
+        }
+    }
+
+    function updateAllVehicles(time) {
+        allVehicles = Array.from(document.getElementsByTagName("img"));
+        allVehicles = allVehicles.filter(e => e.getAttribute("vehicle_type_id") != undefined);
+    }
+
+    function delay(time) {
+        return new Promise(resolve => setTimeout(resolve, time));
+    }
+})();

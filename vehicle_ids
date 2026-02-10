@@ -97,10 +97,10 @@
         94	"Energy Generator Trailer"
         95	"Double Light Boat Trailer"
         96	"Small Heavy Rescue Trailer"
-        97	"Large Heavy Rescue Trailer", color: "#9f1616", credits: 12000, … }
-        98	"Small HazMat Trailer", color: "#9f1616", credits: 12000, … }
-        99	"Large HazMat Trailer", color: "#9f1616", credits: 18000, … }
-        100	"Tiller Ladder Trailer", color: "#9f1616", credits: 7000, … }
+        97	"Large Heavy Rescue Trailer"
+        98	"Small HazMat Trailer"
+        99	"Large HazMat Trailer"
+        100	"Tiller Ladder Trailer"
         101	"Police Traffic Control Unit"
         102	"Police Traffic Blocker Unit"
         103	"Fire Traffic Control Unit",
